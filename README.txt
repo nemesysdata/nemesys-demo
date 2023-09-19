@@ -1,2 +1,0 @@
-# Nemesys
-nemesys-demo

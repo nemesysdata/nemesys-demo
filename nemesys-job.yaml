@@ -1,0 +1,36 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: jobinicializar
+  namespace: nemesys-demo
+  labels:
+    job_name: jobinicializar
+spec:
+  template:
+    metadata:
+      labels:
+        app: jobinicializarid
+      name: jobinicializarid
+    spec:
+      imagePullSecrets:
+      - name: dcmasterb      
+      containers:
+        - image: dcmasterb/nemesys-demo-000:v1.0.0
+          imagePullPolicy: "IfNotPresent"
+          name: "pyvendas"
+          env:
+          - name: INICIALIZAR
+            value: "0"
+          volumeMounts:
+          - name: nemesys-demo-vendas-config
+            mountPath: /var/app/etc/config.json
+            subPath: config.json
+      volumes:
+        - name: nemesys-demo-vendas-config
+          configMap:
+            name: nemesys-demo-vendas-config
+            items:
+            - key: nemesys-demo-vendas-config.properties
+              path: config.json
+      restartPolicy: Never
+  backoffLimit: 10

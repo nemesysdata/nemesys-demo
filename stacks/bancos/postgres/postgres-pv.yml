@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  namespace: nemesys-demo
+  name: nemesys-demo-postgres-data-pv
+  labels:
+    type: hostPath
+spec:
+  capacity:
+    storage: 5Gi
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: nemesys-demo-postgres    
+  hostPath:
+    path: /Users/brunoaureliomuccio/Projetos/Pessoal/nemesis_stack/stacks/bancos/postgres/data

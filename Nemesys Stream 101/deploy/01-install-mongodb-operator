@@ -1,0 +1,4 @@
+#!/bin/zsh
+
+helm repo add --force-update mongodb https://mongodb.github.io/helm-charts
+helm upgrade --cleanup-on-fail --install community-operator mongodb/community-operator --namespace nemesys-stream-101 --create-namespace --wait

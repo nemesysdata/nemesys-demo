@@ -1,0 +1,42 @@
+# the user credentials will be generated from this secret
+# once the credentials are generated, this secret is no longer required
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: mongodb-password
+  namespace: nemesys-stream-101
+type: Opaque
+stringData:
+  password: "password123"
+---
+apiVersion: mongodbcommunity.mongodb.com/v1
+kind: MongoDBCommunity
+metadata:
+  name: mongodb-stocks
+  namespace: nemesys-stream-101
+spec:
+  members: 1
+  type: ReplicaSet
+  version: "5.0.15"
+  security:
+    authentication:
+      modes: ["SCRAM"]
+  users:
+    - name: adminuser
+      db: admin
+      passwordSecretRef: # a reference to the secret that will be used to generate the user's password
+        name: mongodb-password
+      roles:
+        - name: clusterAdmin
+          db: admin
+        - name: userAdminAnyDatabase
+          db: admin
+        - name: root
+          db: admin
+        - name: dbOwner
+          db: StockData
+      scramCredentialsSecretName: my-scram
+  additionalMongodConfig:
+    storage.wiredTiger.engineConfig.journalCompressor: zlib
+---

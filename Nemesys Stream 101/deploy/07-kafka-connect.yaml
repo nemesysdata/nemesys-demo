@@ -1,0 +1,111 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaConnect
+metadata:
+  name: nemesys-connect
+  annotations:
+#  # use-connector-resources configures this KafkaConnect
+#  # to use KafkaConnector resources to avoid
+#  # needing to call the Connect REST API directly
+    strimzi.io/use-connector-resources: "true"
+spec:
+  version: 3.5.1
+  replicas: 1
+  # image: quay.io/debezium/connect:latest
+  # image: fadriano/kafka-connector-strimzi:1.0.4
+  bootstrapServers: nemesys-stream-101-kafka-bootstrap:9093
+  tls:
+    trustedCertificates:
+      - secretName: nemesys-stream-101-cluster-ca-cert
+        certificate: ca.crt
+  config:
+    group.id: connect-cluster
+    offset.storage.topic: connect-cluster-offsets
+    config.storage.topic: connect-cluster-configs
+    status.storage.topic: connect-cluster-status
+    # -1 means it will use the default replication factor configured in the broker
+    config.storage.replication.factor: -1
+    offset.storage.replication.factor: -1
+    status.storage.replication.factor: -1
+  build:
+      output:
+        type: docker
+        image: fadriano/nemesys-stream-101-kafka-connect:v1.0.0
+        pushSecret: regcred
+      plugins:
+        - name: debezium-connector-mongodb
+          artifacts:
+            - type: tgz
+              url: https://repo1.maven.org/maven2/io/debezium/debezium-connector-mongodb/2.5.1.Final/debezium-connector-mongodb-2.5.1.Final-plugin.tar.gz
+        - name: debezium-postgres-connector
+          artifacts:
+            - type: tgz
+              url: https://repo1.maven.org/maven2/io/debezium/debezium-connector-postgres/2.3.2.Final/debezium-connector-postgres-2.3.2.Final-plugin.tar.gz    
+        - name: debezium-sqlserver-connector
+          artifacts:
+            - type: tgz
+              url: https://repo1.maven.org/maven2/io/debezium/debezium-connector-sqlserver/2.3.2.Final/debezium-connector-sqlserver-2.3.2.Final-plugin.tar.gz
+        - name: kafka-connect-file
+          artifacts:
+            - type: maven
+              group: org.apache.kafka
+              artifact: connect-file
+              version: 3.5.1
+        - name: kafka-connect-avro-converter
+          artifacts:
+            - type: jar
+              group: io.confluent
+              artifact: kafka-connect-avro-converter
+              version: 7.4.0
+              url: https://packages.confluent.io/maven/io/confluent/kafka-connect-avro-converter/7.4.0/kafka-connect-avro-converter-7.4.0.jar
+            - type: jar
+              group: io.confluent
+              artifact: kafka-connect-avro-data
+              version: 7.4.0
+              url: https://packages.confluent.io/maven/io/confluent/kafka-connect-avro-data/7.4.0/kafka-connect-avro-data-7.4.0.jar
+            - type: jar
+              group: io.confluent
+              artifact: kafka-avro-serializer
+              version: 7.4.0
+              url: https://packages.confluent.io/maven/io/confluent/kafka-avro-serializer/7.4.0/kafka-avro-serializer-7.4.0.jar
+            - type: jar
+              group: io.confluent
+              artifact: kafka-schema-serializer
+              version: 7.4.0
+              url: https://packages.confluent.io/maven/io/confluent/kafka-schema-serializer/7.4.0/kafka-schema-serializer-7.4.0.jar
+            - type: jar
+              group: io.confluent
+              artifact: kafka-schema-registry
+              version: 7.4.0
+              url: https://packages.confluent.io/maven/io/confluent/kafka-schema-registry/7.4.0/kafka-schema-registry-7.4.0.jar
+            - type: jar
+              group: io.confluent
+              artifact: kafka-schema-converter
+              version: 7.4.0
+              url: https://packages.confluent.io/maven/io/confluent/kafka-schema-converter/7.4.0/kafka-schema-converter-7.4.0.jar
+            - type: jar
+              group: io.confluent
+              artifact: kafka-schema-registry-client
+              version: 7.4.0
+              url: https://packages.confluent.io/maven/io/confluent/kafka-schema-registry-client/7.4.0/kafka-schema-registry-client-7.4.0.jar
+            - type: jar
+              group: io.confluent
+              artifact: common-config
+              version: 7.4.0
+              url: https://packages.confluent.io/maven/io/confluent/common-config/7.4.0/common-config-7.4.0.jar
+            - type: jar
+              group: io.confluent
+              artifact: common-utils
+              version: 7.4.0
+              url: https://packages.confluent.io/maven/io/confluent/common-utils/7.4.0/common-utils-7.4.0.jar
+            - type: maven
+              group: org.apache.avro
+              artifact: avro
+              version: 1.11.2
+            - type: maven
+              group: org.apache.commons
+              artifact: commons-compress
+              version: 1.23.0
+  # jvmOptions:
+  #   javaSystemProperties:
+  #     - name: crypto.policy
+  #       value: "LEGACY"    

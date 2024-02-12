@@ -1,0 +1,3 @@
+#!/bin/zsh
+
+helm install strimzi-cluster-operator oci://quay.io/strimzi-helm/strimzi-kafka-operator

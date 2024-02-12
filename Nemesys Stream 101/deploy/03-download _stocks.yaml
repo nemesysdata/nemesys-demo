@@ -1,0 +1,28 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: download-stocks
+  namespace: nemesys-stream-101
+spec:
+  schedule: "*/5 8-20 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: download-stocks
+              image: ghcr.io/nemesysdata/download_stocks:latest
+              imagePullPolicy: Always
+              command: ["./download_stocks"]
+              env:
+                - name: MONGODB_URI
+                  valueFrom: 
+                    secretKeyRef:
+                      name: download-stocks
+                      key: MONGODB_URI
+                - name: FINAZON_API_KEY
+                  valueFrom: 
+                    secretKeyRef:
+                      name: download-stocks
+                      key: FINAZON_API_KEY
+          restartPolicy: OnFailure

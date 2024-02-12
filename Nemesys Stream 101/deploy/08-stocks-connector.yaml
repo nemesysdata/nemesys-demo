@@ -1,0 +1,46 @@
+apiVersion: kafka.strimzi.io/v1beta2
+kind: KafkaConnector
+metadata:
+  # connector name
+  name: ingest-stocks
+  namespace: nemesys-stream-101
+  labels:
+    strimzi.io/cluster: nemesys-connect
+spec:
+  class: io.debezium.connector.mongodb.MongoDbConnector
+  tasksMax: 5
+  config:
+    key.converter: "io.confluent.connect.avro.AvroConverter"
+    key.converter.schema.registry.url: "http://nemesys-sr-schema-registry-headless:8081"
+    value.converter: "io.confluent.connect.avro.AvroConverter"
+    value.converter.schema.registry.url: "http://nemesys-sr-schema-registry-headless:8081"
+    topic.prefix: stocks
+    
+    mongodb.connection.string: "mongodb://mongodb-stocks-0.mongodb-stocks-svc.nemesys-stream-101.svc.cluster.local:27017/?replicaSet=mongodb-stocks"
+    mongodb.authsource: "admin"
+    mongodb.connection.mode: "replica_set"
+    mongodb.user: "adminuser"
+    mongodb.password: "password123"
+
+    # database.exclude.list: "admin,config,local"
+    # collection.include.list: "StockData.*"
+
+    schema.history.internal.kafka.bootstrap.servers: "nemesys-stream-101-kafka-bootstrap:9092"
+    schema.history.internal.kafka.topic: "stocks.history"
+    database.encrypt: false
+    
+    snapshot.mode: "initial"
+
+    poll.interval.ms: 20000
+    max.batch.size: 600
+    max.queue.size: 1200
+    query.fetch.size: 1000
+    snapshot.fetch.size: 600
+    snapshot.lock.timeout.ms: 10000        
+    transforms: "unwrap"
+    transforms.unwrap.type: "io.debezium.connector.mongodb.transforms.ExtractNewDocumentState"
+    transforms.unwrap.add.headers: "source.db"
+    transforms.unwrap.add.fields: "op,collection,ts_ms"
+    transforms.unwrap.drop.tombstones: "false"
+    transforms.unwrap.delete.handling.mode: "drop"
+    # transforms.unwrap.delete.handling.mode: "rewrite"

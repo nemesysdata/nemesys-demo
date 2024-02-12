@@ -1,0 +1,31 @@
+{
+    "before": null,
+    "after": {
+        "string": "{\"_id\": {\"$oid\": \"65ca85aa80e42ff40b155c07\"},\"ticker\": \"AAPL\",\"description\": \"Apple Inc.\",\"timestamp\": {\"$date\": 1707771180000},\"open\": 187.41000366210938,\"high\": 187.4199981689453,\"low\": 187.3699951171875,\"close\": 187.4199981689453,\"volume\": 3156}"
+    },
+    "updateDescription": null,
+    "source": {
+        "version": "2.5.1.Final",
+        "connector": "mongodb",
+        "name": "stocks",
+        "ts_ms": 0,
+        "snapshot": {
+            "string": "true"
+        },
+        "db": "StockData",
+        "sequence": null,
+        "rs": "mongodb-stocks",
+        "collection": "stocks",
+        "ord": -1,
+        "lsid": null,
+        "txnNumber": null,
+        "wallTime": null
+    },
+    "op": {
+        "string": "r"
+    },
+    "ts_ms": {
+        "long": 1707780186183
+    },
+    "transaction": null
+}

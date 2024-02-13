@@ -1,5 +1,6 @@
 import os
 import socket
+import ssl
 from kafka import KafkaConsumer, TopicPartition
 
 KAFKA_BOOTSTRAP = [
@@ -17,7 +18,10 @@ def checkKafka(host, port):
             print(e)
         
 def topics():
-    cluster = KafkaConsumer(security_protocol="SSL", ssl_check_hostname=False, bootstrap_servers=KAFKA_BOOTSTRAP)
+    ssl_context = ssl._create_unverified_context()
+
+
+    cluster = KafkaConsumer(security_protocol="SSL", ssl_context=ssl_context, bootstrap_servers=KAFKA_BOOTSTRAP)
 
     # brokers = cluster.brokers()
     topicos = cluster.topics()

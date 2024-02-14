@@ -115,13 +115,13 @@ print("Delta Path........:", delta_path)
 print("Checkpoint Path...:", checkpoint_path)
 print("Delta Path Exists.:", delta_path_exists)
 
-# df = stream_topico(
-#     spark, 
-#     KAFKA_BOOTSTRAP, 
-#     f'{prefixo}.{nome}', 
-#     delta_path, 
-#     checkpoint_path, 
-#     earliest=not delta_path_exists
-# )
+df = stream_topico(
+    spark, 
+    KAFKA_BOOTSTRAP, 
+    f'{prefixo}.{nome}', 
+    delta_path, 
+    checkpoint_path, 
+    earliest=not delta_path_exists
+)
 
-# df.awaitTermination()
+df.awaitTermination()

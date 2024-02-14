@@ -10,7 +10,7 @@ spec:
       args:
         - clone
         - --single-branch
-        - --
+        - --verbose
         - https://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@github.com/nemesysdata/nemesys-demo.git
         - /repo # Put it in the volume
       securityContext:
@@ -22,7 +22,7 @@ spec:
           mountPath: /repo
   containers:
     - name: teste
-      image: ubuntu
+      image: ghcr.io/nemesysdata/nemesys-runner:main
       command:
         - sleep
         - infinity

@@ -108,13 +108,12 @@ db = tokens[1]
 prefixo = ".".join(tokens[:-1])
 nome = tokens[-1]
 
-print(f"Topico: {topico}")
-print(f"DB: {db}")
-print(f"Prefixo: {prefixo}")
-print(f"Nome: {nome}")
+delta_path, checkpoint_path = paths(nome.lower(), db, "bronze")
+delta_path_exists = delta_exists(delta_path, nome.lower(), db, STORAGE_ACCOUNT, STORAGE_KEY)
 
-# delta_path, checkpoint_path = paths(nome.lower(), db, "bronze")
-# delta_path_exists = delta_exists(delta_path, nome.lower(), db, STORAGE_ACCOUNT, STORAGE_KEY)
+print("Delta Path........:", delta_path)
+print("Checkpoint Path...:", checkpoint_path)
+print("Delta Path Exists.:", delta_path_exists)
 
 # df = stream_topico(
 #     spark, 

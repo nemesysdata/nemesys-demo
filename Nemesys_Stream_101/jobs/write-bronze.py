@@ -49,8 +49,8 @@ def delta_exists(delta_path, topic, db, storage_account=None, storage_key=None):
 # Retornar os caminhos da tabela
 #--------------------------------------------------------------------------    
 def paths(topico: str, db: str, tier: str):
-    delta_path = f'abfss://{LAKEHOUSE_PATH}@{STORAGE_ACCOUNT}.dfs.core.windows.net/{tier}/{db}_{topico}'
-    checkpoint_path = f'abfss://{LAKEHOUSE_PATH}@{STORAGE_ACCOUNT}.dfs.core.windows.net/{tier}/checkpoint/kafka/{db}_{topico}'
+    delta_path = f'abfss://{BLOB_CONTAINER}@{STORAGE_ACCOUNT}.dfs.core.windows.net/{LAKEHOUSE_PATH}/{tier}/{db}_{topico}'
+    checkpoint_path = f'abfss://{BLOB_CONTAINER}@{STORAGE_ACCOUNT}.dfs.core.windows.net/{LAKEHOUSE_PATH}/{tier}/checkpoint/kafka/{db}_{topico}'
 
     return delta_path, checkpoint_path
 #--------------------------------------------------------------------------

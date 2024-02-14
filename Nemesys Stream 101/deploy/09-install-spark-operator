@@ -1,0 +1,10 @@
+#!/bin/zsh
+
+helm repo add --force-update spark-operator https://googlecloudplatform.github.io/spark-on-k8s-operator
+
+helm upgrade --install spark \
+    --namespace spark-operator \
+    --create-namespace \
+    spark-operator/spark-operator
+
+    # --values ${REPOSITORIES}/spark-operator/values.yaml \

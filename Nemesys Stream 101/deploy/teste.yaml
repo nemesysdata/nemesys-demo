@@ -4,6 +4,22 @@ metadata:
   name: teste
   namespace: nemesys-stream-101
 spec:
+  initContainers:
+    - name: git-clone
+      image: alpine/git # Any image with git will do
+      args:
+        - clone
+        - --single-branch
+        - --
+        - https://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@github.com/nemesysdata/nemesys-demo.git
+        - /repo # Put it in the volume
+      securityContext:
+        runAsUser: 1 # Any non-root user will do. Match to the workload.
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+      volumeMounts:
+        - name: git-repo
+          mountPath: /repo
   containers:
     - name: teste
       image: ubuntu
@@ -15,4 +31,10 @@ spec:
           name: demo-secrets
       - configMapRef:
           name: demo-config
+      volumeMounts:
+          - name: git-repo
+            mountPath: /repo
+  volumes:
+    - name: git-repo
+      emptyDir: {}
         

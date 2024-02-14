@@ -41,7 +41,7 @@ spark.conf.set(f'fs.azure.account.key.{STORAGE_ACCOUNT}.dfs.core.windows.net', S
 def delta_exists(delta_path, topic, db, storage_account=None, storage_key=None):
     if 'abfss://':
         url = f'DefaultEndpointsProtocol=https;AccountName={storage_account};AccountKey={storage_key};EndpointSuffix=core.windows.net'
-        blob = BlobClient.from_connection_string(conn_str=url, container_name=BLOB_CONTAINER, blob_name=f'bronze/{db}_{topic}')
+        blob = BlobClient.from_connection_string(conn_str=url, container_name=BLOB_CONTAINER, blob_name=f'{LAKEHOUSE_PATH}/bronze/{db}_{topic}')
         return blob.exists()
     else:
         return path.exists(delta_path)

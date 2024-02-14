@@ -14,7 +14,7 @@ spec:
     mode: cluster
     image: ghcr.io/nemesysdata/nemesys-runner:main
     imagePullPolicy: Always
-    mainApplicationFile: local:///repo/nemesys-demo/Nemesys%20Stream%20101/jobs/write_bronze.py
+    mainApplicationFile: local:///repo/nemesys-demo/Nemesys%20Stream%20101/jobs/write-bronze.py
     sparkVersion: "3.4.1"
     restartPolicy:
       type: Never

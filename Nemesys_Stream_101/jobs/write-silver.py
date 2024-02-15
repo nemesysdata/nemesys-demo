@@ -130,7 +130,8 @@ df_silver = spark.sql("""
         __op, 
         __collection, 
         (to_timestamp(__ts_ms / 1000) - interval 5 hours) as __ts_ms
-    from bronze_stocks 
+    from bronze_stocks
+    order by ticker, day, timestamp
 """)
 #
 # Replace NaN with 0

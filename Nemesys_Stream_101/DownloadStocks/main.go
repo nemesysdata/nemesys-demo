@@ -96,7 +96,7 @@ func main() {
 	}
 
 	fin = finazon.NewFinazon(finazonAPIKey)
-	tickers := []string{"AAPL", "GOOG", "MSFT", "TSLA", "AMZN"}
+	tickers := []string{"AAPL", "GOOG", "MSFT", "TSLA", "AMZN", "NU"}
 
 	for _, ticker := range tickers {
 		fmt.Println("Downloading stock ", ticker)

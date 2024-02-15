@@ -14,7 +14,7 @@ from pyspark.sql.functions import from_json, col
 from pyspark.sql.types import StringType, DateType, StructType, StructField
 from pyspark.sql.avro.functions import *
 
-APP_NAME = "write_bronze"
+APP_NAME = "write_silver"
 STORAGE_ACCOUNT = os.getenv("STORAGE_ACCOUNT")
 STORAGE_KEY = os.getenv("STORAGE_KEY")
 BLOB_CONTAINER = os.getenv("BLOB_CONTAINER")
@@ -56,10 +56,10 @@ def paths(topico: str, db: str, tier: str):
 #--------------------------------------------------------------------------
 # Carregar uma delta table e registrar como temporária
 #--------------------------------------------------------------------------
-def loadAndRegister(table:str, tier:str = "bronze"):
-    delta_path, _ = paths(table, tier)
+def loadAndRegister(table:str, db:str, tier:str = "bronze"):
+    delta_path, _ = paths(table, db, tier)
     df = spark.read.format("delta").load(delta_path)
-    df.createOrReplaceTempView(table)
+    df.createOrReplaceTempView(f"{tier}_{table}")
     return df
 #--------------------------------------------------------------------------
 # Stream de um topico
@@ -102,33 +102,42 @@ def stream_topico(spark, bootstrap, topico, path_tabela, path_checkpoint, earlie
     
     return df
 
-topico = "stocks.StockData.stocks"
-tokens = topico.split(".")
-db = tokens[1]
-prefixo = ".".join(tokens[:-1])
-nome = tokens[-1]
 
-delta_path, checkpoint_path = paths(nome.lower(), db, "bronze")
-delta_path_exists = delta_exists(delta_path, nome.lower(), db, STORAGE_ACCOUNT, STORAGE_KEY)
+delta_path, _ = paths("stocks", "StockData", "bronze")
+delta_path_final, _ = paths("stocks", "StockData", "silver")
 
-print("Delta Path........:", delta_path)
-print("Checkpoint Path...:", checkpoint_path)
-print("Delta Path Exists.:", delta_path_exists)
+print("Delta Path.......:", delta_path)
+print("Delta Path Final.:", delta_path_final)
 
-df = stream_topico(
-    spark, 
-    KAFKA_BOOTSTRAP, 
-    f'{prefixo}.{nome}', 
-    delta_path, 
-    checkpoint_path, 
-    earliest=not delta_path_exists
-)
-
-df.awaitTermination()
+df = loadAndRegister("stocks", db="StockData", tier="bronze")
 #
-# Optimize delta table
+# Data Transformation
 #
-# from delta.tables import *
-# deltaTable = DeltaTable.forPath(spark, delta_path)
-# df = deltaTable.optimize().executeCompaction()
-# df.show(truncate=False)
+df_silver = spark.sql("""
+    SELECT
+        _id,
+        ticker,
+        date_format(timestamp, "yyyy-MM-dd") as day,
+        description,
+        timestamp,
+        open,
+        high,
+        low,
+        close,
+        volume,
+        (close - LAG(close,1) OVER (PARTITION BY ticker ORDER BY timestamp)) AS osc,
+        (osc * 100.0 / LAG(close,1) OVER (PARTITION BY ticker ORDER BY timestamp)) as osc_per,
+        __op, 
+        __collection, 
+        (to_timestamp(__ts_ms / 1000) - interval 5 hours) as __ts_ms
+    from bronze_stocks 
+""")
+#
+# Replace NaN with 0
+# 
+df_final = df_silver.fillna(value=0)
+#
+# Write to Delta Table
+#
+df_final.write.format("delta").mode("overwrite").partitionBy("ticker", "day").save(delta_path_final)
+

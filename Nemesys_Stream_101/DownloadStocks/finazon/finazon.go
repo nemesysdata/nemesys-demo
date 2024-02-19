@@ -11,6 +11,8 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+const PAGE_SIZE = 500
+
 type Finazon struct {
 	Key string
 }
@@ -58,6 +60,12 @@ type Ticker struct {
 	Composite_figi string `json:"composite_figi"`
 	Share_figi     string `json:"share_figi"`
 	Lei            string `json:"lei"`
+}
+
+type DownloadStocksOptions struct {
+	StartAt int64
+	EndAt   int64
+	Page    int
 }
 
 const URL = "https://api.finazon.io/latest/"
@@ -120,8 +128,24 @@ func (f *Finazon) GetTicker(ticker string) (*Ticker, error) {
 	return &tick.Data[0], nil
 }
 
-func (f *Finazon) DownloadStocks(ticker string) ([]Stock, error) {
-	body, err := f.sendGet(fmt.Sprintf("time_series?dataset=us_stocks_essential&ticker=%s&interval=1m", ticker))
+// DownloadStocks downloads stocks from Finazon of a single page between the interval of startAt and endAt
+func (f *Finazon) DownloadStocks(ticker string, options *DownloadStocksOptions) ([]Stock, error) {
+	var stocks = make([]Stock, 0)
+
+	uri := fmt.Sprintf("time_series?dataset=us_stocks_essential&ticker=%s&interval=1m&page_size=%d&order=asc", ticker, PAGE_SIZE)
+	if options != nil && options.StartAt != 0 {
+		uri += fmt.Sprintf("&start_at=%d", options.StartAt)
+	}
+
+	if options != nil && options.EndAt != 0 {
+		uri += fmt.Sprintf("&end_at=%d", options.EndAt)
+	}
+
+	if options != nil {
+		uri += fmt.Sprintf("&page=%d", options.Page)
+	}
+
+	body, err := f.sendGet(uri)
 	if err != nil {
 		return nil, err
 	}
@@ -134,8 +158,6 @@ func (f *Finazon) DownloadStocks(ticker string) ([]Stock, error) {
 		return nil, err
 	}
 
-	var stocks = make([]Stock, 0)
-
 	for _, item := range response.Data {
 		stock := Stock{
 			Ticker:    ticker,
@@ -147,6 +169,46 @@ func (f *Finazon) DownloadStocks(ticker string) ([]Stock, error) {
 			Volume:    item.Volume,
 		}
 		stocks = append(stocks, stock)
+	}
+
+	return stocks, nil
+}
+
+// Download all of a day starting at 11:30 AM -0300 and finishing at 20:30 PM -0300 to a given ticker
+func (f *Finazon) DownloadAllDay(ticker string, day time.Time) ([]Stock, error) {
+	var stocks = make([]Stock, 0)
+	startAt := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, time.FixedZone("UTC", 0))
+	endAt := time.Date(day.Year(), day.Month(), day.Day(), 23, 59, 590, 999, time.FixedZone("UTC", 0))
+
+	fmt.Println(startAt, endAt)
+
+	page := 0
+	for {
+		fmt.Println("Downloading page ", page)
+
+		options := &DownloadStocksOptions{
+			StartAt: startAt.Unix(),
+			EndAt:   endAt.Unix(),
+			Page:    page,
+		}
+
+		stock, err := f.DownloadStocks(ticker, options)
+		if err != nil {
+			return nil, err
+		}
+
+		if len(stock) == 0 {
+			break
+		}
+
+		stocks = append(stocks, stock...)
+		startAt = startAt.Add(1 * time.Hour)
+
+		if len(stock) < PAGE_SIZE {
+			break
+		}
+
+		page++
 	}
 
 	return stocks, nil

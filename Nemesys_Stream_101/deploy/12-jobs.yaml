@@ -4,7 +4,7 @@ metadata:
   name: pipeline
   namespace: nemesys-stream-101
 spec:    
-  schedule: "@every 2m"
+  schedule: "*/2 14-23 * * 1-5"
   concurrencyPolicy: Forbid
   suspend: false
   successfulRunHistoryLimit: 1

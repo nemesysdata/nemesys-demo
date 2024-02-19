@@ -217,3 +217,36 @@ df.write.format("delta").mode("overwrite").partitionBy("ticker", "day").save(del
   .mode("overwrite")
   .save()
 )
+
+df = spark.sql("""
+select
+    _id,
+    ticker,
+    day,
+    description,
+    timestamp - interval 3 hours as timestamp,
+    open,
+    high,
+    low,
+    close,
+    volume,
+    osc,
+    osc_per,
+    __op,
+    __collection,
+    __ts_ms
+from silver_stocks
+order by ticker, timestamp desc
+""")
+
+(df
+  .write
+  .format("jdbc")
+  .option("url", postgresUrl)
+  .option("driver", "org.postgresql.Driver")
+  .option("dbtable", "stocks_intraday")
+  .option("user", postgresUsername)
+  .option("password", postgresPassword)
+  .mode("overwrite")
+  .save()
+)

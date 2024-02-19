@@ -63,8 +63,8 @@ def paths(topico: str, db: str, tier: str):
 #--------------------------------------------------------------------------
 # Carregar uma delta table e registrar como temporária
 #--------------------------------------------------------------------------
-def loadAndRegister(table:str, tier:str = "bronze"):
-    delta_path, _ = paths(table, tier)
+def loadAndRegister(table:str, db:str, tier:str = "bronze"):
+    delta_path, _ = paths(table, db, tier)
     df = spark.read.format("delta").load(delta_path)
     df.createOrReplaceTempView(table)
     return df

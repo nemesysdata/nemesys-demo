@@ -66,7 +66,7 @@ def paths(topico: str, db: str, tier: str):
 def loadAndRegister(table:str, db:str, tier:str = "bronze"):
     delta_path, _ = paths(table, db, tier)
     df = spark.read.format("delta").load(delta_path)
-    df.createOrReplaceTempView(table)
+    df.createOrReplaceTempView(f"{tier}_{table}")
     return df
 #--------------------------------------------------------------------------
 # Stream de um topico

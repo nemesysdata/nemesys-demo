@@ -3,5 +3,5 @@
 helm upgrade --cleanup-on-fail \
   --install nemesys-sr oci://registry-1.docker.io/bitnamicharts/schema-registry \
   --namespace nemesys-stream-101 \
-  --values schema-registry-values.yaml
+  --values configs/schema-registry-values.yaml
   

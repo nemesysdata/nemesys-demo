@@ -5,6 +5,6 @@ helm repo add --force-update spark-operator https://googlecloudplatform.github.i
 helm upgrade --install spark-operator \
     --namespace spark-operator \
     --create-namespace \
-    --values spark-operator-values.yaml \
+    --values configs/spark-operator-values.yaml \
     spark-operator/spark-operator
 

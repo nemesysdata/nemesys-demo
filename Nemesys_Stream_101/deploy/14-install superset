@@ -1,0 +1,4 @@
+#!/bin/zsh
+
+helm repo add --force-update superset https://apache.github.io/superset
+helm upgrade --cleanup-on-fail --install superset superset/superset --namespace nemesys-dash --values configs/superset-values.yaml --create-namespace

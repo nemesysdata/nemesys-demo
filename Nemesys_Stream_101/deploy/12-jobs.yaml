@@ -52,6 +52,7 @@ spec:
       memory: 1024m
       labels:
         version: 3.4.1
+        job: pipeline
       serviceAccount: default
       volumeMounts:
           - name: git-repo
@@ -104,15 +105,12 @@ metadata:
   name: optimize
   namespace: nemesys-stream-101
 spec:    
-  schedule: "* */1 * * 1-5"
+  schedule: "0 14-23/1 * * 1-5"
   concurrencyPolicy: Forbid
   suspend: false
   successfulRunHistoryLimit: 1
   failedRunHistoryLimit: 5
   template:
-    metadata:
-      labels:
-        job: optimize
     type: Python
     mode: cluster
     image: ghcr.io/nemesysdata/nemesys-runner:main
@@ -155,6 +153,108 @@ spec:
       memory: 1024m
       labels:
         version: 3.4.1
+        job: optimize
+      serviceAccount: default
+      volumeMounts:
+          - name: git-repo
+            mountPath: /repo      
+          - name: work
+            mountPath: /work
+
+    executor:
+      envFrom:
+        - secretRef:
+            name: demo-secrets
+        - configMapRef:
+            name: demo-config
+      initContainers:
+        - name: git-clone
+          image: alpine/git # Any image with git will do
+          args:
+            - clone
+            - --single-branch
+            - --verbose
+            - https://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@github.com/nemesysdata/nemesys-demo.git
+            - /repo # Put it in the volume
+          securityContext:
+            runAsUser: 1 # Any non-root user will do. Match to the workload.
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: git-repo
+              mountPath: /repo  
+      cores: 1
+      coreLimit: 20000m
+      instances: 1
+      memory: 1536m
+      labels:
+        version: 3.4.1
+      volumeMounts:
+          - name: git-repo
+            mountPath: /repo
+          - name: work
+            mountPath: /work
+    volumes:
+      - name: git-repo
+        emptyDir: {}
+      - name: work
+        emptyDir: {}
+---
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: ScheduledSparkApplication
+metadata:
+  name: optimize-vacuum
+  namespace: nemesys-stream-101
+spec:    
+  schedule: "0 3 * * 1-6"
+  concurrencyPolicy: Forbid
+  suspend: false
+  successfulRunHistoryLimit: 1
+  failedRunHistoryLimit: 5
+  template:
+    type: Python
+    mode: cluster
+    image: ghcr.io/nemesysdata/nemesys-runner:main
+    imagePullPolicy: Always
+    mainApplicationFile: local:///repo/Nemesys_Stream_101/jobs/optimize-vacuum.py
+    sparkVersion: "3.4.1"
+    restartPolicy:
+      type: Never
+    sparkConf:
+      "spark.sql.extensions": "io.delta.sql.DeltaSparkSessionExtension"
+      "spark.sql.catalog.spark_catalog": "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+      "spark.scheduler.mode": "FAIR"
+      "spark.driver.memory": "16G"
+      "spark.executor.memory": "16G"
+      "spark.driver.maxResultSize": "4g"
+    driver:
+      envFrom:
+        - secretRef:
+            name: demo-secrets
+        - configMapRef:
+            name: demo-config
+      initContainers:
+        - name: git-clone
+          image: alpine/git # Any image with git will do
+          args:
+            - clone
+            - --single-branch
+            - --verbose
+            - https://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@github.com/nemesysdata/nemesys-demo.git
+            - /repo # Put it in the volume
+          securityContext:
+            runAsUser: 1 # Any non-root user will do. Match to the workload.
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+          volumeMounts:
+            - name: git-repo
+              mountPath: /repo
+      cores: 1
+      coreLimit: 2000m
+      memory: 1024m
+      labels:
+        version: 3.4.1
+        job: optimize-vacuum
       serviceAccount: default
       volumeMounts:
           - name: git-repo

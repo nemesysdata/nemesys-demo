@@ -57,7 +57,7 @@ func PersistStocks(mongoURI string, stocks []finazon.Stock) (int, error) {
 	chanStocks := make(chan finazon.Stock, len(stocks))
 	chanResult := make(chan int8, len(stocks))
 
-	for w := 1; w <= 7; w++ {
+	for w := 1; w <= 20; w++ {
 		go writeStock(w, tblStocks, chanStocks, chanResult)
 	}
 
@@ -105,13 +105,22 @@ func main() {
 
 	fin = finazon.NewFinazon(finazonAPIKey)
 
-	day := time.Date(2024, 2, 14, 0, 0, 0, 0, time.FixedZone("UTC-3", -3*60*60))
-	stocks, err := fin.DownloadAllDay("NU", day)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+	today := time.Now()
+	fmt.Println("Today is", today)
 
+	day := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.FixedZone("UTC-3", -3*60*60))
+
+	stocks := make([]finazon.Stock, 0)
+
+	for _, tiker := range []string{"AAPL", "GOOG", "MSFT", "TSLA", "AMZN", "NU"} {
+		stcks, err := fin.DownloadAllDay(tiker, day)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		stocks = append(stocks, stcks...)
+	}
 	// showStocks(stocks)
 	qtd, err := PersistStocks(mongoURI, stocks)
 	if err != nil {

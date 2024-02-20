@@ -180,7 +180,7 @@ func (f *Finazon) DownloadAllDay(ticker string, day time.Time) ([]Stock, error) 
 	startAt := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, time.FixedZone("UTC", 0))
 	endAt := time.Date(day.Year(), day.Month(), day.Day(), 23, 59, 590, 999, time.FixedZone("UTC", 0))
 
-	fmt.Println(startAt, endAt)
+	fmt.Printf("Baixando %s - %s\n", ticker, startAt)
 
 	page := 0
 	for {

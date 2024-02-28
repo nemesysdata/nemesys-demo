@@ -8,7 +8,8 @@ metadata:
 #  # needing to call the Connect REST API directly
     strimzi.io/use-connector-resources: "true"
 spec:
-  version: 3.5.1
+  version: 3.6.1
+  # version: 3.5.1
   replicas: 1
   # image: quay.io/debezium/connect:latest
   # image: fadriano/kafka-connector-strimzi:1.0.4

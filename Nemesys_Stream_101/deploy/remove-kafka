@@ -1,0 +1,9 @@
+#!/bin/bash
+
+KUBECTL=kubectl
+
+$KUBECTL delete -f 08-stocks-connector.yaml
+helm delete nemesys-sr
+$KUBECTL delete -f 07-kafka-connect.yaml
+$KUBECTL delete -f 05-kafka-jbod-nodeport.yaml
+

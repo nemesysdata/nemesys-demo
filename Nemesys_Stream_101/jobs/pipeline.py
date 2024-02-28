@@ -100,6 +100,7 @@ def stream_topico(spark, bootstrap, topico, path_tabela, path_checkpoint, earlie
         .select("value.*")
         .writeStream
         .format('delta')
+        .partitionBy("ticker")
         .outputMode('append')
         .option('mergeSchema', 'true')
         .option('checkpointLocation', path_checkpoint)

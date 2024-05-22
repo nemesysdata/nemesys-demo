@@ -135,6 +135,7 @@ df.awaitTermination()
 #
 # Silver Layer
 #
+print("Silver Layer")
 delta_path, _ = paths("stocks", "StockData", "bronze")
 delta_path_final, _ = paths("stocks", "StockData", "silver")
 
@@ -170,9 +171,11 @@ df_final = df_silver.fillna(value=0)
 # Write to Delta Table
 #
 df_final.write.format("delta").mode("overwrite").partitionBy("ticker", "day").save(delta_path_final)
+print("Silver Layer Done")
 #
 # Gold Layer
 #
+print("Gold Layer")
 delta_path, _ = paths("stocks", "StockData", "silver")
 delta_path_final, _ = paths("stocks", "StockData", "gold")
 
@@ -220,6 +223,7 @@ df.write.format("delta").mode("overwrite").partitionBy("ticker", "day").save(del
   .save()
 )
 
+print("Gold Layer Daily Done")
 df = spark.sql("""
 select
     _id,
@@ -252,3 +256,6 @@ order by ticker, timestamp desc
   .mode("overwrite")
   .save()
 )
+print("Gold Layer Intraday Done")
+spark.stop()
+#--------------------------------------------------------------------------

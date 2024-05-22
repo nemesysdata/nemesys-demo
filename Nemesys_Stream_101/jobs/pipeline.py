@@ -94,6 +94,7 @@ def stream_topico(spark, bootstrap, topico, path_tabela, path_checkpoint, earlie
         .option("kafka.bootstrap.servers", bootstrap)
         .option("subscribe", topico)
         .option("startingOffsets", offset)
+        .option("failOnDataLoss", False)
         .load()
         .selectExpr("substring(value, 6) as avro_value")
         .select(from_avro(col("avro_value"), schema).alias("value"))

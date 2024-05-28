@@ -3,88 +3,77 @@ package main
 import (
 	"baixar_stock/finazon"
 	"context"
+	"encoding/json"
 	"fmt"
-	"log"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
-	"go.mongodb.org/mongo-driver/bson"
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/options"
+	"github.com/segmentio/kafka-go"
 )
 
 var fin *finazon.Finazon
 
-func writeStock(workerId int, table *mongo.Collection, stocks chan finazon.Stock, result chan int8) {
-	for stock := range stocks {
-		// fmt.Println(workerId, "- Persistindo", stock.Ticker, stock.Timestamp)
+func worker(jobs <-chan finazon.Stock, results chan<- bool) {
+	host := os.Getenv("KAFKA_BOOTSTRAP") //"127.0.0.1:9092"
+	topic := os.Getenv("KAFKA_TOPIC")    //"stocks_intraday"
 
-		_, err := table.InsertOne(context.Background(), stock)
+	// Connect to Kafka
+	conn, err := kafka.DialLeader(context.Background(), "tcp", host, topic, 0)
+	if err != nil {
+		fmt.Printf("Failt to connect with kafka server: %s\n ", err)
+		return
+	}
+
+	fmt.Println("Connected to Kafka Server")
+	for stock := range jobs {
+		msg, err := json.Marshal(stock)
 		if err != nil {
-			result <- 0
-			if !strings.Contains(err.Error(), "E11000") {
-				log.Fatal(err)
-				break
-			}
+			results <- false
 			continue
 		}
 
-		result <- 1
+		_, err = conn.WriteMessages(kafka.Message{Key: []byte(fmt.Sprintf("%s %s", stock.Ticker, stock.Timestamp)), Value: msg})
+		if err != nil {
+			results <- false
+		} else {
+			results <- true
+		}
 	}
+
+	conn.Close()
 }
 
-func PersistStocks(client *mongo.Client, stocks []finazon.Stock) (int, error) {
+func PersistStocks(stocks []finazon.Stock) (int, error) {
+	jobs := make(chan finazon.Stock, len(stocks))
+	results := make(chan bool, len(stocks))
+
+	for w := 1; w <= 100; w++ {
+		go worker(jobs, results)
+	}
+
 	persisted_no := 0
-	// ctx, _ := context.WithTimeout(context.Background(), 30*time.Second)
-
-	db := client.Database("StockData")
-	tblStocks := db.Collection("stocks")
-	// tblTickers := db.Collection("tickers")
-
-	chanStocks := make(chan finazon.Stock, len(stocks))
-	chanResult := make(chan int8, len(stocks))
-
-	for w := 1; w <= 20; w++ {
-		go writeStock(w, tblStocks, chanStocks, chanResult)
-	}
-
 	for _, stock := range stocks {
-		chanStocks <- stock
+
+		jobs <- stock
 	}
+	close(jobs)
 
-	close(chanStocks)
-
-	for r := 1; r <= len(stocks); r++ {
-		res := <-chanResult
-		persisted_no += int(res)
+	for a := 1; a <= len(stocks); a++ {
+		if <-results {
+			persisted_no++
+		}
+		if persisted_no%10 == 0 {
+			fmt.Printf("  %d persisted entries.\n", persisted_no)
+		}
 	}
-
-	close(chanResult)
 
 	return persisted_no, nil
 }
-
-func showStocks(stocks []finazon.Stock) {
-	for _, stock := range stocks {
-		fmt.Println(stock)
-	}
-
-	fmt.Println("Total stocks: ", len(stocks))
-}
-
 func main() {
-	var mongoURI string
 	var finazonAPIKey string
 
 	godotenv.Load()
-
-	mongoURI = os.Getenv("MONGODB_URI")
-	if mongoURI == "" {
-		fmt.Println("MONGODB_URI not defined")
-		return
-	}
 
 	finazonAPIKey = os.Getenv("FINAZON_API_KEY")
 	if finazonAPIKey == "" {
@@ -94,38 +83,13 @@ func main() {
 
 	fin = finazon.NewFinazon(finazonAPIKey)
 
-	ctx := context.Background()
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(mongoURI))
-	if err != nil {
-		fmt.Errorf("error connecting to MongoDB: %v", err)
-	}
-	defer client.Disconnect(ctx)
-
-	fmt.Println("Connecting to MongoDB!")
-	client.Ping(ctx, nil)
-	fmt.Println("Connected to MongoDB!")
-
-	fmt.Println("Index creation...")
-	indexModel := mongo.IndexModel{
-		Keys:    bson.D{{Key: "ticker", Value: 1}, {Key: "timestamp", Value: 1}},
-		Options: options.Index().SetUnique(true),
-	}
-	coll := client.Database("StockData").Collection("stocks")
-	name, err := coll.Indexes().CreateOne(context.TODO(), indexModel)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Printf("Index %s created\n", name)
-
 	today := time.Now()
-	fmt.Println("Today is", today)
+	// today := time.Date(2024, 5, 24, 0, 0, 0, 0, time.FixedZone("UTC-3", -3*60*60))
+	fmt.Println("Today is", today.Format("2006-01-02"))
 
 	for dia := today.Day(); dia <= today.Day(); dia++ {
-		// for dia := 1; dia < 3; dia++ {
 		day := time.Date(today.Year(), today.Month(), dia, 0, 0, 0, 0, time.FixedZone("UTC-3", -3*60*60))
-		fmt.Printf("Baixando stocks do dia %s\n", day.Format("2006-01-02"))
-
-		// day := time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, time.FixedZone("UTC-3", -3*60*60))
+		fmt.Printf("Downloading stocks of %s\n", day.Format("2006-01-02"))
 
 		stocks := make([]finazon.Stock, 0)
 
@@ -138,35 +102,14 @@ func main() {
 
 			stocks = append(stocks, stcks...)
 		}
-		// showStocks(stocks)
 
-		fmt.Print("Persisting stocks... ")
-		qtd, err := PersistStocks(client, stocks)
+		fmt.Println("Persisting Stocks")
+		qtd, err := PersistStocks(stocks)
 		if err != nil {
-			fmt.Println(err)
 			return
 		}
 
 		fmt.Println(qtd, "/", len(stocks), "persisted entries.")
 		fmt.Println()
 	}
-	// tickers := []string{"AAPL", "GOOG", "MSFT", "TSLA", "AMZN", "NU"}
-
-	// for _, ticker := range tickers {
-	// 	fmt.Println("Downloading stock ", ticker)
-	// 	stocks, err := fin.DownloadStocks(ticker, nil)
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 		return
-	// 	}
-
-	// 	showStocks(stocks)
-	// 	qtd, err := PersistStocks(mongoURI, stocks)
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 		return
-	// 	}
-
-	// 	fmt.Println("   ", qtd, "persisted entries.")
-	// }
 }

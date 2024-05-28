@@ -1,0 +1,13 @@
+yamlApplicationConfig:
+  kafka:
+    clusters:
+      - name: yaml
+        bootstrapServers:  demo-kafka-kafka-plain-bootstrap:9092
+  auth:
+    type: disabled
+  management:
+    health:
+      ldap:
+        enabled: false
+service:
+  type: ClusterIP

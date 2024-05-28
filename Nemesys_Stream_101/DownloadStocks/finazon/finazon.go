@@ -7,8 +7,6 @@ import (
 	"log"
 	"net/http"
 	"time"
-
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 const PAGE_SIZE = 500
@@ -18,15 +16,14 @@ type Finazon struct {
 }
 
 type Stock struct {
-	ID          primitive.ObjectID `bson:"_id,omitempty"`
-	Ticker      string             `json:"ticker"`
-	Description string             `json:"description,omitempty"`
-	Timestamp   time.Time          `json:"timestamp"`
-	Open        float32            `json:"open"`
-	High        float32            `json:"high"`
-	Low         float32            `json:"low"`
-	Close       float32            `json:"close"`
-	Volume      int32              `json:"volume"`
+	Ticker      string    `json:"ticker"`
+	Description string    `json:"description,omitempty"`
+	Timestamp   time.Time `json:"timestamp"`
+	Open        float32   `json:"open"`
+	High        float32   `json:"high"`
+	Low         float32   `json:"low"`
+	Close       float32   `json:"close"`
+	Volume      int32     `json:"volume"`
 }
 
 type StockItem struct {
@@ -180,11 +177,11 @@ func (f *Finazon) DownloadAllDay(ticker string, day time.Time) ([]Stock, error) 
 	startAt := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, time.FixedZone("UTC", 0))
 	endAt := time.Date(day.Year(), day.Month(), day.Day(), 23, 59, 590, 999, time.FixedZone("UTC", 0))
 
-	fmt.Printf("Baixando %s - %s\n", ticker, startAt)
+	fmt.Printf("  Downloading %s - %s\n", ticker, startAt)
 
 	page := 0
 	for {
-		fmt.Println("Downloading page ", page)
+		fmt.Println("    Downloading page ", page)
 
 		options := &DownloadStocksOptions{
 			StartAt: startAt.Unix(),

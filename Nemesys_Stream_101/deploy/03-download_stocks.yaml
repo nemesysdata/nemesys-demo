@@ -4,7 +4,7 @@ metadata:
   name: download-stocks
   namespace: nemesys-stream-101
 spec:
-  schedule: "*/2 14-23 * * 1-5"
+  schedule: "*/1 10-23 * * 1-5"
   jobTemplate:
     spec:
       template:
@@ -15,14 +15,19 @@ spec:
               imagePullPolicy: Always
               command: ["./download_stocks"]
               env:
-                - name: MONGODB_URI
-                  valueFrom: 
-                    secretKeyRef:
-                      name: download-stocks
-                      key: MONGODB_URI
                 - name: FINAZON_API_KEY
                   valueFrom: 
                     secretKeyRef:
-                      name: download-stocks
+                      name: demo-secrets
                       key: FINAZON_API_KEY
+                - name: KAFKA_BOOTSTRAP
+                  valueFrom: 
+                    configMapKeyRef:
+                      name: demo-config
+                      key: KAFKA_BOOTSTRAP
+                - name: KAFKA_TOPIC
+                  valueFrom: 
+                    configMapKeyRef:
+                      name: demo-config
+                      key: KAFKA_TOPIC
           restartPolicy: OnFailure

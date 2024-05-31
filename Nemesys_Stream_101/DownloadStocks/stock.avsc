@@ -1,0 +1,43 @@
+{
+  "type": "record",
+  "name": "Stock",
+  "fields": [
+    {
+      "name": "ticker",
+      "type": "string"
+    },
+    {
+      "name": "description",
+      "type": "string",
+      "doc": "Descrição opcional da ação"
+    },
+    {
+      "name": "timestamp",
+      "type": {
+        "type": "long",
+        "logicalType": "timestamp-micros"
+      },
+      "doc": "Timestamp da atualização dos dados"
+    },
+    {
+      "name": "open",
+      "type": "float"
+    },
+    {
+      "name": "high",
+      "type": "float"
+    },
+    {
+      "name": "low",
+      "type": "float"
+    },
+    {
+      "name": "close",
+      "type": "float"
+    },
+    {
+      "name": "volume",
+      "type": "int"
+    }
+  ]
+}

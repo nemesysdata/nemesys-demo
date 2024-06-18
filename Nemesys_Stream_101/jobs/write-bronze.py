@@ -14,6 +14,14 @@ spark = SparkSession.builder \
 
 spark.sparkContext.setLogLevel("ERROR")
 
+spark.conf.set('fs.s3a.endpoint', S3_URL)
+spark.conf.set('fs.s3a.access.key', S3_ACCESS_KEY)
+spark.conf.set('fs.s3a.secret.key', S3_SECRET_KEY)
+spark.conf.set("spark.sql.debug.maxToStringFields", "100")
+spark.conf.set("fs.s3a.path.style.access", "true")
+spark.conf.set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+spark.conf.set("fs.s3a.connection.ssl.enabled", "true")
+
 tabela = "s3a://nemesys-demo1/lakehouse/bronze/stocks_intraday"
 checkpoint = "s3a://nemesys-demo1/lakehouse/bronze/checkpoint/stocks_intraday"
 offset = "latest"

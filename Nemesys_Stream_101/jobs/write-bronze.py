@@ -3,8 +3,8 @@ from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, to_date
 from pyspark.sql.avro.functions import *
 
-import LoadEnvironment
-import schemas
+from LoadEnvironment import *
+from schemas import *
 
 APP_NAME = "write_bronze"
 
@@ -26,7 +26,7 @@ offset = "latest"
     .option("startingOffsets", offset)
     # .option("security.protocol", "SSL")
     .load()
-    .select(from_avro(col("value"), schema).alias("value"))
+    .select(from_avro(col("value"), sch_bronze_stocks).alias("value"))
     .select("value.*")
     .writeStream
     .format('delta')

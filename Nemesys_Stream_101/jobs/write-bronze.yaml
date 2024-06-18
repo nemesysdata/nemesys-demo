@@ -1,14 +1,14 @@
 apiVersion: sparkoperator.k8s.io/v1beta2
 kind: SparkApplication
 metadata:
-  name: pipeline
+  name: write-bronze
   namespace: nemesys-stream-101
 spec:    
   type: Python
   mode: cluster
   image: ghcr.io/nemesysdata/nemesys-runner:main
   imagePullPolicy: Always
-  mainApplicationFile: local:///repo/Nemesys_Stream_101/jobs/write_bronze.py
+  mainApplicationFile: local:///repo/Nemesys_Stream_101/jobs/write-bronze.py
   sparkVersion: "3.5.1"
   restartPolicy:
     type: Always

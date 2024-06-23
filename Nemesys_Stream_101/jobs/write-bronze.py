@@ -1,3 +1,4 @@
+from delta import *
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import col, to_date
@@ -24,7 +25,11 @@ spark.conf.set("fs.s3a.connection.ssl.enabled", "true")
 
 tabela = "s3a://nemesys-demo1/lakehouse/bronze/stocks_intraday"
 checkpoint = "s3a://nemesys-demo1/lakehouse/bronze/stocks_intraday/_checkpoint/kafka_raw"
-offset = "latest"
+
+if not DeltaTable.isDeltaTable(spark, tabela):
+    offset = "earliest"
+else:
+    offset = "latest"
 
 (spark
     .readStream

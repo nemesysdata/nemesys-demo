@@ -34,8 +34,8 @@ offset = "latest"
     .option("startingOffsets", offset)
     # .option("security.protocol", "SSL")
     .load()
-    .select(from_avro(col("value"), sch_bronze_stocks).alias("value"))
-    .select("value.*")
+    .select(from_avro(col("value"), sch_bronze_stocks).alias("value"), col("timestamp").alias("_capture_time"))
+    .select(col("value.*"), col("_capture_time"))
     .writeStream
     .format('delta')
     .outputMode('append')

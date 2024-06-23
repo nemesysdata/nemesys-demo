@@ -41,7 +41,7 @@ else:
     .load()
     .withColumn("_capture_time_bronze", current_timestamp())
     .select(from_avro(col("value"), sch_bronze_stocks).alias("value"), col("timestamp").alias("_capture_time_kafka"), col("_capture_time_bronze"))
-    .select(col("value.*"), col("_capture_time"), col("_capture_time_bronze"))
+    .select(col("value.*"), col("_capture_time_kafka"), col("_capture_time_bronze"))
     .writeStream
     .format('delta')
     .outputMode('append')

@@ -23,7 +23,7 @@ spark.conf.set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
 spark.conf.set("fs.s3a.connection.ssl.enabled", "true")
 
 tabela = "s3a://nemesys-demo1/lakehouse/bronze/stocks_intraday"
-checkpoint = "s3a://nemesys-demo1/lakehouse/bronze/checkpoint/stocks_intraday"
+checkpoint = "s3a://nemesys-demo1/lakehouse/bronze/stocks_intraday/_checkpoint/kafka_raw"
 offset = "latest"
 
 (spark

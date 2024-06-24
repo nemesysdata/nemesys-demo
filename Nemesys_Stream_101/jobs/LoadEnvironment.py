@@ -20,3 +20,10 @@ postgresPort = os.getenv("POSTGRES_PORT")
 postgresUrl = f"jdbc:postgresql://{postgresHostname}:{postgresPort}/{postgresDatabase}?"
 postgresUsername = os.getenv("POSTGRES_USERNAME")
 postgresPassword = os.getenv("POSTGRES_PASSWORD")
+
+def table_path(bucket:str, tier:str, table_name:str, storage:str="s3a", base_dir:str="lakehouse"):
+    # if len(tier.strip()) == 0:
+    #     raise ValueError("Tier cannot be empty")
+
+    path = f"{storage}://{bucket}/{base_dir}/{tier}/{table_name}"
+    return path, path + "/_checkpoint/"

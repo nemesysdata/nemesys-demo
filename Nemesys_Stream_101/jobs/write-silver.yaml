@@ -1,0 +1,93 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: write-silver
+  namespace: nemesys-stream-101
+spec:    
+  type: Python
+  mode: cluster
+  image: ghcr.io/nemesysdata/nemesys-runner:main
+  imagePullPolicy: Always
+  mainApplicationFile: local:///repo/Nemesys_Stream_101/jobs/write-silver.py
+  sparkVersion: "3.5.1"
+  restartPolicy:
+    type: Always
+  sparkConf:
+    "spark.sql.extensions": "io.delta.sql.DeltaSparkSessionExtension"
+    "spark.sql.catalog.spark_catalog": "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+    "spark.scheduler.mode": "FAIR"
+    "spark.driver.memory": "8G"
+    "spark.executor.memory": "8G"
+    "spark.driver.maxResultSize": "2g"
+  driver:
+    envFrom:
+      - secretRef:
+          name: demo-secrets
+      - configMapRef:
+          name: demo-config
+    initContainers:
+      - name: git-clone
+        image: alpine/git # Any image with git will do
+        args:
+          - clone
+          - --single-branch
+          - --verbose
+          - https://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@github.com/nemesysdata/nemesys-demo.git
+          - /repo # Put it in the volume
+        securityContext:
+          runAsUser: 1 # Any non-root user will do. Match to the workload.
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        volumeMounts:
+          - name: git-repo
+            mountPath: /repo
+    cores: 2
+    coreLimit: 2000m
+    memory: 1024m
+    labels:
+      version: 3.5.1
+    serviceAccount: default
+    volumeMounts:
+        - name: git-repo
+          mountPath: /repo      
+        - name: work
+          mountPath: /work
+
+  executor:
+    envFrom:
+      - secretRef:
+          name: demo-secrets
+      - configMapRef:
+          name: demo-config
+    initContainers:
+      - name: git-clone
+        image: alpine/git # Any image with git will do
+        args:
+          - clone
+          - --single-branch
+          - --verbose
+          - https://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@github.com/nemesysdata/nemesys-demo.git
+          - /repo # Put it in the volume
+        securityContext:
+          runAsUser: 1 # Any non-root user will do. Match to the workload.
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+        volumeMounts:
+          - name: git-repo
+            mountPath: /repo  
+    cores: 2
+    coreLimit: 20000m
+    instances: 1
+    memory: 1536m
+    labels:
+      version: 3.5.1
+    volumeMounts:
+        - name: git-repo
+          mountPath: /repo
+        - name: work
+          mountPath: /work
+  volumes:
+    - name: git-repo
+      emptyDir: {}
+    - name: work
+      emptyDir: {}

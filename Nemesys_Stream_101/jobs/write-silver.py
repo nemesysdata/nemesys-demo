@@ -1,28 +1,33 @@
-import sys
-import requests
-import time
-import os
-import pyspark
-# from distutils.log import ERROR
-from azure.storage.blob import BlobClient
 from delta import *
-from os import path
-# from matplotlib import container
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import from_json, col
-from pyspark.sql.types import StringType, DateType, StructType, StructField
+from pyspark.sql.functions import col, to_date, current_timestamp
 from pyspark.sql.avro.functions import *
 
-APP_NAME = "write_silver"
-STORAGE_ACCOUNT = os.getenv("STORAGE_ACCOUNT")
-STORAGE_KEY = os.getenv("STORAGE_KEY")
-BLOB_CONTAINER = os.getenv("BLOB_CONTAINER")
-LAKEHOUSE_PATH = os.getenv("LAKEHOUSE_PATH")
+from LoadEnvironment import *
+from schemas import *
 
-KAFKA_BOOTSTRAP = os.getenv("KAFKA_BOOTSTRAP")
-TOPIC_PREFIX = os.getenv("TOPIC_PREFIX")
-SCHEMA_REGISTRY = os.getenv("SCHEMA_REGISTRY_URL")
+def config_upsert(delta):
+    def upsertToDelta(microbatchdf, batchId):
+        print(f'Batch {batchId} com {microbatchdf.count()} linhas')
+        # Verificar e remover duplicatas no microbatch
+        microbatchdf_clean = microbatchdf.dropDuplicates(["ticker", "timestamp"])
+        
+        # Garantir que os campos estejam no mesmo formato
+        microbatchdf_clean = microbatchdf_clean.withColumn("ticker", col("ticker").cast("string"))
+        microbatchdf_clean = microbatchdf_clean.withColumn("timestamp", col("timestamp").cast("timestamp"))
+        
+        delta.alias("t").merge(
+          microbatchdf_clean.alias("s"),
+          "s.ticker = t.ticker and s.timestamp = t.timestamp") \
+        .whenMatchedUpdateAll() \
+        .whenNotMatchedInsertAll() \
+        .execute()
+        print(f'Exportadas {microbatchdf_clean.count()} linhas')
+        
+    return upsertToDelta
+
+APP_NAME = "write_bronze"
 
 spark = SparkSession.builder \
         .appName(APP_NAME) \
@@ -30,115 +35,50 @@ spark = SparkSession.builder \
 
 spark.sparkContext.setLogLevel("ERROR")
 
-#--------------------------------------------------------------------------
-# Configurar o acesso ao Azure Data Lake (Blob)
-#--------------------------------------------------------------------------
-spark.conf.set(f'fs.azure.account.auth.type.{STORAGE_ACCOUNT}.dfs.core.windows.net', 'SharedKey')
-spark.conf.set(f'fs.azure.account.key.{STORAGE_ACCOUNT}.dfs.core.windows.net', STORAGE_KEY)
-#--------------------------------------------------------------------------
-# Checar se Delta Table existe
-#--------------------------------------------------------------------------
-def delta_exists(delta_path, topic, db, storage_account=None, storage_key=None):
-    if 'abfss://':
-        url = f'DefaultEndpointsProtocol=https;AccountName={storage_account};AccountKey={storage_key};EndpointSuffix=core.windows.net'
-        blob = BlobClient.from_connection_string(conn_str=url, container_name=BLOB_CONTAINER, blob_name=f'{LAKEHOUSE_PATH}/bronze/{db}_{topic}')
-        return blob.exists()
-    else:
-        return path.exists(delta_path)
-#--------------------------------------------------------------------------
-# Retornar os caminhos da tabela
-#--------------------------------------------------------------------------    
-def paths(topico: str, db: str, tier: str):
-    delta_path = f'abfss://{BLOB_CONTAINER}@{STORAGE_ACCOUNT}.dfs.core.windows.net/{LAKEHOUSE_PATH}/{tier}/{db}_{topico}'
-    checkpoint_path = f'abfss://{BLOB_CONTAINER}@{STORAGE_ACCOUNT}.dfs.core.windows.net/{LAKEHOUSE_PATH}/{tier}/checkpoint/kafka/{db}_{topico}'
+spark.conf.set('fs.s3a.endpoint', S3_URL)
+spark.conf.set('fs.s3a.access.key', S3_ACCESS_KEY)
+spark.conf.set('fs.s3a.secret.key', S3_SECRET_KEY)
+spark.conf.set("spark.sql.debug.maxToStringFields", "100")
+spark.conf.set("fs.s3a.path.style.access", "true")
+spark.conf.set("fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem")
+spark.conf.set("fs.s3a.connection.ssl.enabled", "true")
 
-    return delta_path, checkpoint_path
-#--------------------------------------------------------------------------
-# Carregar uma delta table e registrar como temporária
-#--------------------------------------------------------------------------
-def loadAndRegister(table:str, db:str, tier:str = "bronze"):
-    delta_path, _ = paths(table, db, tier)
-    df = spark.read.format("delta").load(delta_path)
-    df.createOrReplaceTempView(f"{tier}_{table}")
-    return df
-#--------------------------------------------------------------------------
-# Stream de um topico
-#--------------------------------------------------------------------------
-def stream_topico(spark, bootstrap, topico, path_tabela, path_checkpoint, earliest=False, timeout=60):
-    offset = 'earliest' if earliest else 'latest'
+stock_bronze, stock_bronze_checkpoint_dir = table_path("nemesys-demo1", "bronze", "stocks_intraday")
+stock_silver, stock_silver_checkpoint_dir = table_path("nemesys-demo1", "silver", "stocks_intraday")
 
-    print('=======================================================================')
-    print('Configuração do STREAM')
-    print(f'\tTopico..........: {topico}')
-    print(f'\tPath Tabela.....: {path_tabela}')
-    print(f'\tPath Checkpoint.: {path_checkpoint}')
-    print(f'\tOffset..........: {offset}')
-
-    # retrieve the latest schema
-    response = requests.get('{}/subjects/{}-value/versions/latest/schema'.format(SCHEMA_REGISTRY, topico))    
-    # error check
-    response.raise_for_status()
-    # extract the schema from the response
-    schema = response.text    
-    
-    df = (spark
-        .readStream
-        .format("kafka")
-        .option("kafka.bootstrap.servers", bootstrap)
-        .option("subscribe", topico)
-        .option("startingOffsets", offset)
-        .load()
-        .selectExpr("substring(value, 6) as avro_value")
-        .select(from_avro(col("avro_value"), schema).alias("value"))
-        .select("value.*")
-        .writeStream
-        .format('delta')
-        .outputMode('append')
-        .option('mergeSchema', 'true')
-        .option('checkpointLocation', path_checkpoint)
-        .trigger(once=True)
-        .start(path_tabela)
+if not DeltaTable.isDeltaTable(spark, stock_silver):
+    print("Criar tabela")
+    schema = (StructType()
+        .add("ticker", StringType())
+        .add('ano', IntegerType())
+        .add("timestamp", TimestampType())
+        .add("open", DoubleType())
+        .add("high", DoubleType())
+        .add("low", DoubleType())
+        .add("close", DoubleType())
+        .add("volume", LongType())
+        .add("_capture_time_kafka", TimestampType())
+        .add("_capture_time_bronze", TimestampType())
+        .add("_capture_time_silver", TimestampType())
     )
-    
-    return df
+    emptyDF = spark.createDataFrame(spark.sparkContext.emptyRDD(), schema)
+    emptyDF.write.format('delta').mode('overwrite').partitionBy("ticker", "ano").save(stock_silver)
 
+deltaTable = DeltaTable.forPath(spark, stock_silver)
 
-delta_path, _ = paths("stocks", "StockData", "bronze")
-delta_path_final, _ = paths("stocks", "StockData", "silver")
-
-print("Delta Path.......:", delta_path)
-print("Delta Path Final.:", delta_path_final)
-
-df = loadAndRegister("stocks", db="StockData", tier="bronze")
-#
-# Data Transformation
-#
-df_silver = spark.sql("""
-    SELECT
-        _id,
-        ticker,
-        date_format(timestamp, "yyyy-MM-dd") as day,
-        description,
-        timestamp,
-        open,
-        high,
-        low,
-        close,
-        volume,
-        (close - LAG(close,1) OVER (PARTITION BY ticker ORDER BY timestamp)) AS osc,
-        (osc * 100.0 / LAG(close,1) OVER (PARTITION BY ticker ORDER BY timestamp)) as osc_per,
-        __op, 
-        __collection, 
-        (to_timestamp(__ts_ms / 1000) - interval 5 hours) as __ts_ms
-    from bronze_stocks
-    order by ticker, day, timestamp
-""")
-#
-# Replace NaN with 0
-# 
-df_final = df_silver.fillna(value=0)
-#
-# Write to Delta Table
-#
-df_final.write.format("delta").mode("overwrite").partitionBy("ticker", "day").save(delta_path_final)
-
+(spark
+    .readStream
+    .format("delta")
+    .option('startingOffsets', 'earliest')
+    .load(stock_bronze)
+    .withColumn('timestamp_real', to_timestamp("timestamp"))
+    .withColumn('ano', date_format('timestamp', 'yyyy').cast(IntegerType()))
+    .withColumn("_capture_time_silver", current_timestamp())
+    .writeStream
+    .format('delta')
+    .foreachBatch(config_upsert(deltaTable))
+    .outputMode('update')
+    .option('checkpointLocation', stock_bronze_checkpoint_dir + "silver")
+    .start()
+    .awaitTermination()
+)

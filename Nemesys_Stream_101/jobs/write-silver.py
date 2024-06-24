@@ -27,7 +27,7 @@ def config_upsert(delta):
         
     return upsertToDelta
 
-APP_NAME = "write_bronze"
+APP_NAME = "write_dilver"
 
 spark = SparkSession.builder \
         .appName(APP_NAME) \

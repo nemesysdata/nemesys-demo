@@ -46,6 +46,7 @@ spark.conf.set("fs.s3a.connection.ssl.enabled", "true")
 stock_bronze, stock_bronze_checkpoint_dir = table_path("nemesys-demo1", "bronze", "stocks_intraday")
 stock_silver, stock_silver_checkpoint_dir = table_path("nemesys-demo1", "silver", "stocks_intraday")
 
+offset = "latest"
 if not DeltaTable.isDeltaTable(spark, stock_silver):
     print("Criar tabela")
     schema = (StructType()
@@ -63,13 +64,15 @@ if not DeltaTable.isDeltaTable(spark, stock_silver):
     )
     emptyDF = spark.createDataFrame(spark.sparkContext.emptyRDD(), schema)
     emptyDF.write.format('delta').mode('overwrite').partitionBy("ticker", "ano").save(stock_silver)
+    offset = "earliest"
+
 
 deltaTable = DeltaTable.forPath(spark, stock_silver)
 
 (spark
     .readStream
     .format("delta")
-    .option('startingOffsets', 'earliest')
+    .option('startingOffsets', offset)
     .load(stock_bronze)
     .withColumn('timestamp_real', to_timestamp("timestamp"))
     .withColumn('ano', date_format('timestamp', 'yyyy').cast(IntegerType()))

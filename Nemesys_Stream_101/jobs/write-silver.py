@@ -1,7 +1,7 @@
 from delta import *
 from pyspark import SparkContext
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col, to_date, current_timestamp
+from pyspark.sql.types import StringType, DateType, StructType, DoubleType, IntegerType, LongType, TimestampType
 from pyspark.sql.avro.functions import *
 
 from LoadEnvironment import *

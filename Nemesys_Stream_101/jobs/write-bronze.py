@@ -50,3 +50,5 @@ else:
     .start(tabela)
     .awaitTermination()
 )
+
+spark.stop()

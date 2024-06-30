@@ -86,3 +86,5 @@ deltaTable = DeltaTable.forPath(spark, stock_silver)
     .start()
     .awaitTermination()
 )
+
+spark.stop()
